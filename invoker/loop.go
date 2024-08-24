@@ -16,9 +16,10 @@ var queue *data.ScheduleQueue
 func New(conn *pgx.Conn) {
 	queries = database.New(conn)
 
-	gocron.Every(10).Minute().Do(SecondaryLoop)
+	Load()
 
 	gocron.Every(1).Minute().Do(PrimaryLoop)
+	gocron.Every(10).Minute().Do(Load)
 }
 
 func PrimaryLoop() {
@@ -39,7 +40,7 @@ func PrimaryLoop() {
 	go invoke(schedule)
 }
 
-func SecondaryLoop() {
+func Load() {
 	ctx := context.Background()
 
 	// fetch most recent schedule
