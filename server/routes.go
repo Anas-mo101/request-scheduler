@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"task-scheduler/data"
-	"task-scheduler/database"
+	database "task-scheduler/database/sqlc"
+	"task-scheduler/datastore"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -34,7 +34,7 @@ func (s *FiberServer) RegisterHandler(c *fiber.Ctx) error {
 			return
 		}
 
-		queue := data.GetQueueInstance()
+		queue := datastore.GetQueueInstance()
 		queue.SetQueue(schedules)
 	}()
 

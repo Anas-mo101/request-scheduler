@@ -2,8 +2,8 @@ package invoker
 
 import (
 	"context"
-	"task-scheduler/data"
-	"task-scheduler/database"
+	database "task-scheduler/database/sqlc"
+	"task-scheduler/datastore"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -11,7 +11,7 @@ import (
 )
 
 var queries *database.Queries
-var queue *data.ScheduleQueue
+var queue *datastore.ScheduleQueue
 
 func New(conn *pgx.Conn) {
 	queries = database.New(conn)
@@ -50,6 +50,6 @@ func Load() {
 		return
 	}
 
-	queue := data.GetQueueInstance()
+	queue := datastore.GetQueueInstance()
 	queue.SetQueue(schedules)
 }

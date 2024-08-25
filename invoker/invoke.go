@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"task-scheduler/database"
+	database "task-scheduler/database/sqlc"
 	"time"
 )
 

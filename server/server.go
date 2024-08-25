@@ -1,7 +1,7 @@
 package server
 
 import (
-	"task-scheduler/database"
+	database "task-scheduler/database/sqlc"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
