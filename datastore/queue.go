@@ -22,17 +22,18 @@ func GetQueueInstance() *ScheduleQueue {
 	return instance
 }
 
-// Enqueue adds an item to the end of the queue
-func (q *ScheduleQueue) Enqueue(item database.Schedule) {
-	q.items = append(q.items, item)
-}
-
 func (q *ScheduleQueue) SetQueue(items []database.Schedule) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
 	q.items = items
 }
 
 // Dequeue removes and returns the item at the front of the queue
 func (q *ScheduleQueue) Dequeue() (database.Schedule, error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
 	if len(q.items) == 0 {
 		var zeroValue database.Schedule
 		return zeroValue, fmt.Errorf("queue is empty")
@@ -42,13 +43,11 @@ func (q *ScheduleQueue) Dequeue() (database.Schedule, error) {
 	return item, nil
 }
 
-// IsEmpty checks if the queue is empty
-func (q *ScheduleQueue) IsEmpty() bool {
-	return len(q.items) == 0
-}
-
 // Peek returns the item at the front of the queue without removing it
 func (q *ScheduleQueue) Peek() (database.Schedule, error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
 	if len(q.items) == 0 {
 		var zeroValue database.Schedule
 		return zeroValue, fmt.Errorf("queue is empty")

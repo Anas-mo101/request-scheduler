@@ -28,6 +28,8 @@ func main() {
 		os.Getenv("DATABASE_NAME"),
 	)
 
+	println(connStr)
+
 	conn, err := pgx.Connect(ctx, connStr)
 	if err != nil {
 		panic(err)
@@ -36,7 +38,7 @@ func main() {
 
 	server := server.New(conn)
 
-	go invoker.New(conn)
+	invoker.Init(conn)
 
 	server.RegisterFiberRoutes()
 
@@ -46,4 +48,6 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("cannot start server: %s", err))
 	}
+
+	invoker.Wg.Wait()
 }

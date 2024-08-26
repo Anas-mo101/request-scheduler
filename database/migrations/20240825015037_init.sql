@@ -15,7 +15,7 @@ CREATE TABLE Schedule (
     invocation_timestamp TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     request_method "method" NOT NULL,
-    request_body_type bodyType DEFAULT "TEXT",
+    request_body_type "bodyType" NOT NULL DEFAULT "TEXT",
     request_body TEXT NOT NULL,
     request_url TEXT NOT NULL,
     request_header JSONB,

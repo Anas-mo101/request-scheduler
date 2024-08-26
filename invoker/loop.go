@@ -2,6 +2,8 @@ package invoker
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	database "task-scheduler/database/sqlc"
 	"task-scheduler/datastore"
 	"time"
@@ -12,17 +14,53 @@ import (
 
 var queries *database.Queries
 var queue *datastore.ScheduleQueue
+var ch chan InvokedSchedule
+var Wg sync.WaitGroup
 
-func New(conn *pgx.Conn) {
-	queries = database.New(conn)
-
-	Load()
-
-	gocron.Every(1).Minute().Do(PrimaryLoop)
-	gocron.Every(10).Minute().Do(Load)
+type InvokedSchedule struct {
+	schedule database.Schedule
+	err      error
 }
 
-func PrimaryLoop() {
+func Init(conn *pgx.Conn) {
+	queries = database.New(conn)
+	ch = make(chan InvokedSchedule)
+
+	load()
+	go listen()
+
+	gocron.Every(1).Minute().Do(loop)
+	gocron.Every(10).Minute().Do(load)
+}
+
+func listen() {
+	ctx := context.Background()
+
+	for {
+		invokedSchedule := <-ch
+
+		if invokedSchedule.err != nil {
+			// Update the status to 'Invoked'
+			_, _ = queries.ScheduleSuccss(ctx, invokedSchedule.schedule.ID)
+			continue
+		}
+
+		// Update the status to 'Failed'
+		updatedSchedule, _ := queries.IncrementFailure(ctx, database.IncrementFailureParams{
+			ID:            invokedSchedule.schedule.ID,
+			FailureReason: invokedSchedule.err.Error(),
+		})
+
+		if updatedSchedule.MaxRetries.Int32 > updatedSchedule.RetriesNo.Int32 {
+			Wg.Add(1)
+			go invoke(invokedSchedule.schedule)
+		}
+	}
+}
+
+func loop() {
+	fmt.Print("Cron: loop")
+
 	toCheck, err := queue.Peek()
 
 	if err != nil {
@@ -37,10 +75,13 @@ func PrimaryLoop() {
 
 	schedule, _ := queue.Dequeue()
 
+	Wg.Add(1)
 	go invoke(schedule)
 }
 
-func Load() {
+func load() {
+	fmt.Print("Cron: load")
+
 	ctx := context.Background()
 
 	// fetch most recent schedule
