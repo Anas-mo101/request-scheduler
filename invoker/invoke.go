@@ -11,6 +11,7 @@ import (
 )
 
 func invoke(schedule database.Schedule) {
+	Wg.Add(1)
 	defer Wg.Done()
 
 	req, err := http.NewRequest(

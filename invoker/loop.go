@@ -52,7 +52,6 @@ func listen() {
 		})
 
 		if updatedSchedule.MaxRetries.Int32 > updatedSchedule.RetriesNo.Int32 {
-			Wg.Add(1)
 			go invoke(invokedSchedule.schedule)
 		}
 	}
@@ -60,23 +59,25 @@ func listen() {
 
 func loop() {
 	fmt.Print("Cron: loop")
+	for {
+		toCheck, err := queue.Peek()
 
-	toCheck, err := queue.Peek()
+		if err != nil {
+			// in case queue is empty load again
+			load()
+			return
+		}
 
-	if err != nil {
-		return
+		isAfter := toCheck.InvocationTimestamp.Time.After(time.Now())
+
+		if !isAfter {
+			return
+		}
+
+		schedule, _ := queue.Dequeue()
+
+		go invoke(schedule)
 	}
-
-	isAfter := toCheck.InvocationTimestamp.Time.After(time.Now())
-
-	if !isAfter {
-		return
-	}
-
-	schedule, _ := queue.Dequeue()
-
-	Wg.Add(1)
-	go invoke(schedule)
 }
 
 func load() {
