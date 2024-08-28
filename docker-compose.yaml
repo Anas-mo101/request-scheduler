@@ -17,11 +17,12 @@ services:
       - DATABASE_NAME:${DATABASE_NAME:-scheduler}
       - DATABASE_PORT:${DATABASE_PORT:-5432}
     ports:
-      - ${BACKEND_PORT:-8080}:3000
+      - ${BACKEND_PORT:-3000}:3000
     networks:
       - scheduler
     depends_on: 
       - postgres
+    restart: unless-stopped
 
   postgres:
     container_name: postgres_container
