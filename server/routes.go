@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	database "task-scheduler/database/sqlc"
 	"task-scheduler/datastore"
 
@@ -13,11 +14,12 @@ import (
 type RegSchedule struct {
 	InvocationTimestamp pgtype.Timestamptz `json:"invocation_timestamp"`
 	RequestMethod       database.Method    `json:"request_method"`
-	RequestBody         string             `json:"request_body"`
-	RequestHeader       []byte             `json:"request_header"`
-	RequestQuery        []byte             `json:"request_query"`
+	RequestBody         pgtype.Text        `json:"request_body"`
+	RequestHeader       map[string]string  `json:"request_header"`
+	RequestQuery        map[string]string  `json:"request_query"`
 	MaxRetries          pgtype.Int4        `json:"max_retries"`
 	RequestUrl          string             `json:"request_url"`
+	RequestBodyType     database.BodyType  `json:"request_body_type"`
 }
 
 func (s *FiberServer) RegisterFiberRoutes() {
@@ -27,20 +29,11 @@ func (s *FiberServer) RegisterFiberRoutes() {
 func (s *FiberServer) RegisterHandler(c *fiber.Ctx) error {
 	ctx := context.Background()
 
-	defer func() {
-		schedules, err := s.db.ListSchedule(ctx, 10)
-
-		if err != nil {
-			return
-		}
-
-		queue := datastore.GetQueueInstance()
-		queue.SetQueue(schedules)
-	}()
-
 	req := new(RegSchedule)
 
 	if err := c.BodyParser(&req); err != nil {
+		fmt.Printf(err.Error())
+
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "failed to parse request body",
 		})
@@ -49,8 +42,19 @@ func (s *FiberServer) RegisterHandler(c *fiber.Ctx) error {
 	// Prepare the request header to be stored as JSONB
 	requestHeaderJSON, err := json.Marshal(req.RequestHeader)
 	if err != nil {
+		fmt.Printf(err.Error())
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to marshal request header",
+		})
+	}
+
+	requestQueryJSON, err := json.Marshal(req.RequestQuery)
+	if err != nil {
+		fmt.Printf(err.Error())
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to marshal RequestQuery",
 		})
 	}
 
@@ -61,15 +65,21 @@ func (s *FiberServer) RegisterHandler(c *fiber.Ctx) error {
 		RequestBody:         req.RequestBody,
 		RequestHeader:       requestHeaderJSON,
 		MaxRetries:          req.MaxRetries,
-		RequestQuery:        req.RequestQuery,
+		RequestQuery:        requestQueryJSON,
 		RequestUrl:          req.RequestUrl,
+		RequestBodyType:     req.RequestBodyType,
 	})
 
 	if err != nil {
+		fmt.Printf(err.Error())
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to create schedule",
 		})
 	}
+
+	queue := datastore.GetQueueInstance()
+	queue.EnQueueWithinRange(schedule)
 
 	// Return the created schedule as a JSON response
 	return c.Status(fiber.StatusOK).JSON(schedule)

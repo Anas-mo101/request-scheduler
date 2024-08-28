@@ -15,27 +15,23 @@ CREATE TABLE Schedule (
     invocation_timestamp TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     request_method "method" NOT NULL,
-    request_body_type "bodyType" NOT NULL DEFAULT "TEXT",
-    request_body TEXT NOT NULL,
+    request_body_type "bodyType",
+    request_body TEXT,
     request_url TEXT NOT NULL,
     request_header JSONB,
     request_query JSONB,
-    status "status" NOT NULL DEFAULT "Scheduled",
+    status "status" NOT NULL,
     retries_no INT DEFAULT 0,
     max_retries INT DEFAULT 1,
-    failure_reason TEXT NOT NULL,
-
-    CONSTRAINT "Schedule_pkey" PRIMARY KEY ("id")
+    failure_reason TEXT
 );
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-
 DROP TABLE Schedule;
 DROP TYPE "method";
-DROP TYPE "users";
+DROP TYPE "bodyType";
 DROP TYPE "status";
-
 SELECT 'down SQL query';
 -- +goose StatementEnd

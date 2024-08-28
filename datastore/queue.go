@@ -6,6 +6,8 @@ import (
 	database "task-scheduler/database/sqlc"
 )
 
+const limit int32 = 10
+
 // Queue represents a FIFO queue
 type ScheduleQueue struct {
 	items []database.Schedule
@@ -20,6 +22,32 @@ func GetQueueInstance() *ScheduleQueue {
 		instance = &ScheduleQueue{}
 	})
 	return instance
+}
+
+func (q *ScheduleQueue) GetLimit() int32 {
+	return limit
+}
+
+func (q *ScheduleQueue) EnQueueWithinRange(item database.Schedule) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if len(q.items) == 0 {
+		return
+	}
+
+	var final = q.items[len(q.items)-1]
+
+	if final.InvocationTimestamp.Time.After(item.InvocationTimestamp.Time) {
+		q.enQueue(item)
+	}
+}
+
+func (q *ScheduleQueue) enQueue(item database.Schedule) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	q.items = append(q.items, item)
 }
 
 func (q *ScheduleQueue) SetQueue(items []database.Schedule) {
@@ -38,6 +66,7 @@ func (q *ScheduleQueue) Dequeue() (database.Schedule, error) {
 		var zeroValue database.Schedule
 		return zeroValue, fmt.Errorf("queue is empty")
 	}
+
 	item := q.items[0]
 	q.items = q.items[1:]
 	return item, nil

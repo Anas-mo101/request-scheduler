@@ -3,7 +3,7 @@ migrations_dir = database/migrations
 compose_cmd = docker-compose
 
 export GOOSE_DRIVER=postgres
-export GOOSE_DBSTRING=postgresql://postgres:changeme@172.19.0.2:5432/scheduler?sslmode=disable
+export GOOSE_DBSTRING=postgres://postgres:changeme@localhost:5432/scheduler?sslmode=disable
 
 help:
 	@echo build           : build local docker setup

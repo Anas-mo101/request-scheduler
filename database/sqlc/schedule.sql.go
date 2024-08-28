@@ -19,9 +19,11 @@ INSERT INTO Schedule (
   request_body, 
   request_header,
   request_query, 
-  max_retries
+  max_retries,
+  request_body_type,
+  status
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
+  $1, $2, $3, $4, $5, $6, $7, $8, 'Scheduled'
 )
 RETURNING id, invocation_timestamp, created_at, request_method, request_body_type, request_body, request_url, request_header, request_query, status, retries_no, max_retries, failure_reason
 `
@@ -30,10 +32,11 @@ type CreateScheduleParams struct {
 	InvocationTimestamp pgtype.Timestamptz
 	RequestMethod       Method
 	RequestUrl          string
-	RequestBody         string
+	RequestBody         pgtype.Text
 	RequestHeader       []byte
 	RequestQuery        []byte
 	MaxRetries          pgtype.Int4
+	RequestBodyType     BodyType
 }
 
 func (q *Queries) CreateSchedule(ctx context.Context, arg CreateScheduleParams) (Schedule, error) {
@@ -45,6 +48,7 @@ func (q *Queries) CreateSchedule(ctx context.Context, arg CreateScheduleParams) 
 		arg.RequestHeader,
 		arg.RequestQuery,
 		arg.MaxRetries,
+		arg.RequestBodyType,
 	)
 	var i Schedule
 	err := row.Scan(
@@ -70,14 +74,14 @@ UPDATE Schedule
 SET 
   retries_no = retries_no + 1,
   failure_reason = $2,
-  status = "Failed"
+  status = 'Failed'
 WHERE id = $1
 RETURNING id, invocation_timestamp, created_at, request_method, request_body_type, request_body, request_url, request_header, request_query, status, retries_no, max_retries, failure_reason
 `
 
 type IncrementFailureParams struct {
 	ID            int32
-	FailureReason string
+	FailureReason pgtype.Text
 }
 
 func (q *Queries) IncrementFailure(ctx context.Context, arg IncrementFailureParams) (Schedule, error) {
@@ -103,8 +107,8 @@ func (q *Queries) IncrementFailure(ctx context.Context, arg IncrementFailurePara
 
 const listSchedule = `-- name: ListSchedule :many
 SELECT id, invocation_timestamp, created_at, request_method, request_body_type, request_body, request_url, request_header, request_query, status, retries_no, max_retries, failure_reason FROM Schedule
-WHERE id = "Scheduled" AND invocation_timestamp > NOW()
-ORDER BY invocation_timestamp DESC
+WHERE status = 'Scheduled'
+ORDER BY invocation_timestamp ASC
 LIMIT $1
 `
 
@@ -145,7 +149,7 @@ func (q *Queries) ListSchedule(ctx context.Context, limit int32) ([]Schedule, er
 const scheduleSuccss = `-- name: ScheduleSuccss :one
 UPDATE Schedule
 SET 
-  status = "Invoked"
+  status = 'Invoked'
 WHERE id = $1
 RETURNING id, invocation_timestamp, created_at, request_method, request_body_type, request_body, request_url, request_header, request_query, status, retries_no, max_retries, failure_reason
 `

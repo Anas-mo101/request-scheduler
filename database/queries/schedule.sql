@@ -1,7 +1,7 @@
 -- name: ListSchedule :many
 SELECT * FROM Schedule
-WHERE id = "Scheduled" AND invocation_timestamp > NOW()
-ORDER BY invocation_timestamp DESC
+WHERE status = 'Scheduled'
+ORDER BY invocation_timestamp ASC
 LIMIT $1;
 
 -- name: IncrementFailure :one
@@ -9,7 +9,7 @@ UPDATE Schedule
 SET 
   retries_no = retries_no + 1,
   failure_reason = $2,
-  status = "Failed"
+  status = 'Failed'
 WHERE id = $1
 RETURNING *;
 
@@ -17,7 +17,7 @@ RETURNING *;
 -- name: ScheduleSuccss :one
 UPDATE Schedule
 SET 
-  status = "Invoked"
+  status = 'Invoked'
 WHERE id = $1
 RETURNING *;
 
@@ -29,8 +29,10 @@ INSERT INTO Schedule (
   request_body, 
   request_header,
   request_query, 
-  max_retries
+  max_retries,
+  request_body_type,
+  status
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
+  $1, $2, $3, $4, $5, $6, $7, $8, 'Scheduled'
 )
 RETURNING *;

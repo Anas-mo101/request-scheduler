@@ -1,6 +1,7 @@
 version: '3'
 
 services:
+
   backend:
     build:
       context: .
@@ -19,6 +20,8 @@ services:
       - ${BACKEND_PORT:-8080}:3000
     networks:
       - scheduler
+    depends_on: 
+      - postgres
 
   postgres:
     container_name: postgres_container
@@ -49,7 +52,6 @@ services:
     networks:
       - scheduler
     restart: unless-stopped
-
 
 networks:
   scheduler:

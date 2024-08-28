@@ -17,7 +17,7 @@ func invoke(schedule database.Schedule) {
 	req, err := http.NewRequest(
 		string(schedule.RequestMethod),
 		schedule.RequestUrl,
-		bytes.NewBufferString(schedule.RequestBody),
+		bytes.NewBufferString(schedule.RequestBody.String),
 	)
 
 	if err != nil {
@@ -85,8 +85,17 @@ func invoke(schedule database.Schedule) {
 	// Handle the response (for example, logging it)
 	fmt.Printf("Invoked: %s\n", resp.Status)
 
+	statusOK := resp.StatusCode >= 200 && resp.StatusCode < 300
+	if statusOK {
+		ch <- InvokedSchedule{
+			schedule: schedule,
+			err:      nil,
+		}
+		return
+	}
+
 	ch <- InvokedSchedule{
 		schedule: schedule,
-		err:      nil,
+		err:      errors.New(fmt.Sprintf("failed HTTP request %s: %s", resp.StatusCode, err.Error())),
 	}
 }

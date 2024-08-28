@@ -144,12 +144,12 @@ type Schedule struct {
 	CreatedAt           pgtype.Timestamptz
 	RequestMethod       Method
 	RequestBodyType     BodyType
-	RequestBody         string
+	RequestBody         pgtype.Text
 	RequestUrl          string
 	RequestHeader       []byte
 	RequestQuery        []byte
 	Status              Status
 	RetriesNo           pgtype.Int4
 	MaxRetries          pgtype.Int4
-	FailureReason       string
+	FailureReason       pgtype.Text
 }
