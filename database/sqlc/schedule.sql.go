@@ -96,6 +96,32 @@ func (q *Queries) DeletSchedule(ctx context.Context, id int32) (Schedule, error)
 	return i, err
 }
 
+const getSchedule = `-- name: GetSchedule :one
+SELECT id, invocation_timestamp, created_at, request_method, request_body_type, request_body, request_url, request_header, request_query, status, retries_no, max_retries, failure_reason FROM Schedule
+WHERE id = $1
+`
+
+func (q *Queries) GetSchedule(ctx context.Context, id int32) (Schedule, error) {
+	row := q.db.QueryRow(ctx, getSchedule, id)
+	var i Schedule
+	err := row.Scan(
+		&i.ID,
+		&i.InvocationTimestamp,
+		&i.CreatedAt,
+		&i.RequestMethod,
+		&i.RequestBodyType,
+		&i.RequestBody,
+		&i.RequestUrl,
+		&i.RequestHeader,
+		&i.RequestQuery,
+		&i.Status,
+		&i.RetriesNo,
+		&i.MaxRetries,
+		&i.FailureReason,
+	)
+	return i, err
+}
+
 const incrementFailure = `-- name: IncrementFailure :one
 UPDATE Schedule
 SET 
@@ -130,6 +156,73 @@ func (q *Queries) IncrementFailure(ctx context.Context, arg IncrementFailurePara
 		&i.FailureReason,
 	)
 	return i, err
+}
+
+const listRegSchedule = `-- name: ListRegSchedule :many
+SELECT id, invocation_timestamp, created_at, request_method, request_body_type, request_body, request_url, request_header, request_query, status, retries_no, max_retries, failure_reason FROM Schedule
+WHERE 
+  ($3::text IS NULL OR invocation_timestamp = $3) AND
+  ($4::text IS NULL OR request_method = $4) AND
+  ($5::text IS NULL OR request_url = $5) AND
+  ($6::int32 IS NULL OR max_retries = $6) AND
+  ($7::text IS NULL OR request_body_type = $7) AND
+  ($8::text IS NULL OR status = $8)
+ORDER BY invocation_timestamp ASC
+LIMIT $1 OFFSET $2
+`
+
+type ListRegScheduleParams struct {
+	Limit   int32
+	Offset  int32
+	Column3 string
+	Column4 string
+	Column5 string
+	Column6 interface{}
+	Column7 string
+	Column8 string
+}
+
+func (q *Queries) ListRegSchedule(ctx context.Context, arg ListRegScheduleParams) ([]Schedule, error) {
+	rows, err := q.db.Query(ctx, listRegSchedule,
+		arg.Limit,
+		arg.Offset,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+		arg.Column6,
+		arg.Column7,
+		arg.Column8,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Schedule
+	for rows.Next() {
+		var i Schedule
+		if err := rows.Scan(
+			&i.ID,
+			&i.InvocationTimestamp,
+			&i.CreatedAt,
+			&i.RequestMethod,
+			&i.RequestBodyType,
+			&i.RequestBody,
+			&i.RequestUrl,
+			&i.RequestHeader,
+			&i.RequestQuery,
+			&i.Status,
+			&i.RetriesNo,
+			&i.MaxRetries,
+			&i.FailureReason,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSchedule = `-- name: ListSchedule :many
@@ -183,6 +276,67 @@ RETURNING id, invocation_timestamp, created_at, request_method, request_body_typ
 
 func (q *Queries) ScheduleSuccss(ctx context.Context, id int32) (Schedule, error) {
 	row := q.db.QueryRow(ctx, scheduleSuccss, id)
+	var i Schedule
+	err := row.Scan(
+		&i.ID,
+		&i.InvocationTimestamp,
+		&i.CreatedAt,
+		&i.RequestMethod,
+		&i.RequestBodyType,
+		&i.RequestBody,
+		&i.RequestUrl,
+		&i.RequestHeader,
+		&i.RequestQuery,
+		&i.Status,
+		&i.RetriesNo,
+		&i.MaxRetries,
+		&i.FailureReason,
+	)
+	return i, err
+}
+
+const updateSchedule = `-- name: UpdateSchedule :one
+UPDATE Schedule
+SET 
+  invocation_timestamp = $2, 
+  request_method = $3, 
+  request_url = $4, 
+  request_body = $5, 
+  request_header = $6,
+  request_query = $7, 
+  max_retries = $8,
+  request_body_type = $9,
+  status = $10
+WHERE id = $1
+RETURNING id, invocation_timestamp, created_at, request_method, request_body_type, request_body, request_url, request_header, request_query, status, retries_no, max_retries, failure_reason
+`
+
+type UpdateScheduleParams struct {
+	ID                  int32
+	InvocationTimestamp pgtype.Timestamptz
+	RequestMethod       Method
+	RequestUrl          string
+	RequestBody         pgtype.Text
+	RequestHeader       []byte
+	RequestQuery        []byte
+	MaxRetries          pgtype.Int4
+	RequestBodyType     NullBodyType
+	Status              Status
+}
+
+func (q *Queries) UpdateSchedule(ctx context.Context, arg UpdateScheduleParams) (Schedule, error) {
+	row := q.db.QueryRow(ctx, updateSchedule,
+		arg.ID,
+		arg.InvocationTimestamp,
+		arg.RequestMethod,
+		arg.RequestUrl,
+		arg.RequestBody,
+		arg.RequestHeader,
+		arg.RequestQuery,
+		arg.MaxRetries,
+		arg.RequestBodyType,
+		arg.Status,
+	)
 	var i Schedule
 	err := row.Scan(
 		&i.ID,
