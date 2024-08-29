@@ -14,6 +14,11 @@ WHERE id = $1
 RETURNING *;
 
 
+-- name: DeletSchedule :one
+DELETE FROM Schedule
+WHERE id = $1
+RETURNING *;
+
 -- name: ScheduleSuccss :one
 UPDATE Schedule
 SET 

@@ -28,11 +28,11 @@ func invoke(schedule database.Schedule) {
 		return
 	}
 
-	if schedule.RequestBodyType == "TEXT" {
+	if schedule.RequestBodyType.BodyType == "TEXT" {
 		req.Header.Add("Content-Type", "text/plain")
 	}
 
-	if schedule.RequestBodyType == "JSON" {
+	if schedule.RequestBodyType.BodyType == "JSON" {
 		req.Header.Add("Content-Type", "application/json")
 	}
 

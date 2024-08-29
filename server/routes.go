@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	database "task-scheduler/database/sqlc"
 	"task-scheduler/datastore"
 
@@ -12,18 +13,42 @@ import (
 )
 
 type RegSchedule struct {
-	InvocationTimestamp pgtype.Timestamptz `json:"invocation_timestamp"`
-	RequestMethod       database.Method    `json:"request_method"`
-	RequestBody         pgtype.Text        `json:"request_body"`
-	RequestHeader       map[string]string  `json:"request_header"`
-	RequestQuery        map[string]string  `json:"request_query"`
-	MaxRetries          pgtype.Int4        `json:"max_retries"`
-	RequestUrl          string             `json:"request_url"`
-	RequestBodyType     database.BodyType  `json:"request_body_type"`
+	InvocationTimestamp pgtype.Timestamptz    `json:"invocation_timestamp"`
+	RequestMethod       database.Method       `json:"request_method"`
+	RequestBody         pgtype.Text           `json:"request_body"`
+	RequestHeader       map[string]string     `json:"request_header"`
+	RequestQuery        map[string]string     `json:"request_query"`
+	MaxRetries          pgtype.Int4           `json:"max_retries"`
+	RequestUrl          string                `json:"request_url"`
+	RequestBodyType     database.NullBodyType `json:"request_body_type"`
 }
 
 func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Post("/api/schedule", s.RegisterHandler)
+	s.App.Delete("/api/schedule/:id", s.DeleteHandler)
+}
+
+func (s *FiberServer) DeleteHandler(c *fiber.Ctx) error {
+	ctx := context.Background()
+
+	id := c.Params("id")
+	sid, err := strconv.ParseInt(id, 10, 32)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to delete schedule",
+		})
+	}
+
+	schedule, err := s.db.DeletSchedule(ctx, int32(sid))
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to delete schedule",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(schedule)
 }
 
 func (s *FiberServer) RegisterHandler(c *fiber.Ctx) error {

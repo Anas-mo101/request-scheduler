@@ -36,7 +36,7 @@ type CreateScheduleParams struct {
 	RequestHeader       []byte
 	RequestQuery        []byte
 	MaxRetries          pgtype.Int4
-	RequestBodyType     BodyType
+	RequestBodyType     NullBodyType
 }
 
 func (q *Queries) CreateSchedule(ctx context.Context, arg CreateScheduleParams) (Schedule, error) {
@@ -50,6 +50,33 @@ func (q *Queries) CreateSchedule(ctx context.Context, arg CreateScheduleParams) 
 		arg.MaxRetries,
 		arg.RequestBodyType,
 	)
+	var i Schedule
+	err := row.Scan(
+		&i.ID,
+		&i.InvocationTimestamp,
+		&i.CreatedAt,
+		&i.RequestMethod,
+		&i.RequestBodyType,
+		&i.RequestBody,
+		&i.RequestUrl,
+		&i.RequestHeader,
+		&i.RequestQuery,
+		&i.Status,
+		&i.RetriesNo,
+		&i.MaxRetries,
+		&i.FailureReason,
+	)
+	return i, err
+}
+
+const deletSchedule = `-- name: DeletSchedule :one
+DELETE FROM Schedule
+WHERE id = $1
+RETURNING id, invocation_timestamp, created_at, request_method, request_body_type, request_body, request_url, request_header, request_query, status, retries_no, max_retries, failure_reason
+`
+
+func (q *Queries) DeletSchedule(ctx context.Context, id int32) (Schedule, error) {
+	row := q.db.QueryRow(ctx, deletSchedule, id)
 	var i Schedule
 	err := row.Scan(
 		&i.ID,

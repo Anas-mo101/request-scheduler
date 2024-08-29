@@ -143,7 +143,7 @@ type Schedule struct {
 	InvocationTimestamp pgtype.Timestamptz
 	CreatedAt           pgtype.Timestamptz
 	RequestMethod       Method
-	RequestBodyType     BodyType
+	RequestBodyType     NullBodyType
 	RequestBody         pgtype.Text
 	RequestUrl          string
 	RequestHeader       []byte
